@@ -23,19 +23,31 @@ This project began as a tool for analyzing fantasy football data with a friend. 
 
 ```
 /FantasyFootballAnalysisDB
-├── README.md
-├── LICENSE
-├── SQL/
-│   ├── FantasyFootballFinalProject.sql
-│   ├── ImportingDataFinalProject.sql
-│   └── FinalProjectExampleQueries.sql
 ├── Data Wrangling/
-│   ├── GamesData.R
-│   └── [Any CSV staging files]
+│   ├── Games Table/
+│   │   ├── DamesData.csv
+│   │   └── GamesData.qmd
+│   ├── Players Stats Table/
+│   │   ├── StatsData.csv
+│   │   └── StatsData.qmd
+│   ├── Players Table/
+│   │   ├── PlayersData.csv
+│   │   └── PlayersData.qmd
+│   ├── Starting Data/
+│   │   └── NFLBoxScores.csv
+│   ├── Teams Table/
+│   │   ├── TeamsData.csv
+│   │   └── TeamsData.qmd
 ├── Docs/
-│   ├── Final Project Final Draft.docx
-│   ├── FinalProjectRationalModel.png
-│   └── Final Project Proposal.docx  (optional)
+│   ├── ERDiagram.png
+│   ├── Final Report.docx
+│   └── Project Proposal.docx
+├── SQL/
+│   ├── CreateDB.sql
+│   ├── DataImport.sql
+│   └── ExampleQueries.sql
+├── LICENSE
+├── README.md
 ```
 
 ## Data Sources

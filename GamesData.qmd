@@ -1,0 +1,62 @@
+---
+title: "Fantasy Football: Games Data"
+author: "Odin Lee"
+date: "Jan 26 2025"
+format: "html"
+---
+
+# Description
+
+Using **nflreadr** R package to create **GamesData.csv** which will be used to import into the **Games Table** in the Fantasy Football Database
+
+## **Load libraries**
+
+```{r}
+
+# Load the needed libraries
+library(dplyr)
+library(nflreadr)
+library(nflfastR)
+
+```
+
+## Import Data
+
+```{r}
+
+# Fetch NFL schedules for the 2021-2024 seasons
+NFLBoxScores <- fast_scraper_schedules(2021:2024)
+
+# Remove non regular season games
+NFLBoxScoresYears <- NFLBoxScores |>
+  filter(game_type == 'REG')
+
+```
+
+## Modify and Clean Data
+
+```{r}
+
+# Select only columns needed for the database
+NFLBoxScoresSimplified <- NFLBoxScoresYears |>
+  select(season, week, home_team, away_team, home_score, away_score)
+
+# Change week from a single number like 10 to "Week 10"
+NFLBoxScoresWeeks <- NFLBoxScoresSimplified |>
+  mutate(week = sprintf("Week %d", as.numeric(week)))
+
+# Change team abbreviation for LA to LAR
+GamesData <- NFLBoxScoresWeeks |>
+  mutate(home_team = gsub("^LA$", "LAR", home_team),
+         away_team = gsub("^LA$", "LAR", away_team))
+
+```
+
+## Export Data
+
+```{r}
+
+# Create CSV File of Final Data Set
+write.csv(GamesData, "GamesData.csv", row.names = FALSE)
+
+```

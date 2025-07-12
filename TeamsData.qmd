@@ -1,0 +1,56 @@
+---
+title: "Fantasy Football: Teams Data"
+author: "Odin Lee"
+date: "Jan 26 2025"
+format: "html"
+---
+
+# Description
+
+Using **nflfastR** R package to create **TeamsData.csv** which will be used to import into the **Teams** Table in the Fantasy Football Database
+
+## **Load libraries**
+
+```{r}
+
+# Load the needed libraries
+library(dplyr)
+library(tidyr)
+library(nflfastR)
+
+```
+
+## Import Data
+
+```{r}
+
+# Fetch teams data set
+TeamsData <- teams_colors_logos
+
+```
+
+## Modify and Clean Data
+
+```{r}
+
+# Select only columns needed for the database
+TeamsDataSimplified <- TeamsData |>
+  select(-team_id, -team_logo_wikipedia)
+
+# Remove extra teams
+TeamsDataTeams <- TeamsDataSimplified[!TeamsDataSimplified$team_abbr %in% c("LA", "OAK", "SD", "STL"), ]
+
+# Change column name to prevent confusion
+TeamsData <- TeamsDataTeams |>
+  rename(teamid = team_abbr)
+
+```
+
+## Export Data
+
+```{r}
+
+# Create CSV File of Final Data Set
+write.csv(TeamsData, "TeamsData.csv", row.names = FALSE)
+
+```

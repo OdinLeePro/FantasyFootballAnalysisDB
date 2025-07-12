@@ -1,0 +1,222 @@
+---
+title: "Fantasy Football: Players Data"
+author: "Odin Lee"
+date: "Jan 26 2025"
+format: "html"
+---
+
+# **Description**
+
+Using **nflreadr** R package to create **PlayersData.csv** which will be used to import into the **Players Table** in the Fantasy Football Database.
+
+## **Load libraries**
+
+```{r}
+
+# Load the needed libraries
+library(tidyr)
+library(dplyr)
+library(stringr)
+library(nflreadr)
+
+```
+
+## Import Data
+
+```{r}
+
+# Fetch player rosters for the 2021-2024 seasons
+PlayersData <- load_rosters(2021:2024)
+
+# Read in StatsData.csv file for later comparison
+StatsData <- read.csv("StatsData.csv")
+
+```
+
+## Modify and Clean Data
+
+```{r}
+
+# Select relevant columns from PlayersData
+PlayersDataSimplified <- PlayersData |>
+  select(full_name, season, position, jersey_number, team, college, birth_date, height, weight,
+         years_exp, headshot_url)
+
+# Remove non QB, RB, WR, TE, and K
+PlayersDataPlayers <- PlayersDataSimplified |>
+  filter(position %in% c('QB', 'RB', 'WR', 'TE', 'K'))
+
+# Separate full_name into to columns first_name and last_name
+PlayersDataNames <- PlayersDataPlayers |>
+  separate(full_name, into = c("first_name", "last_name"), sep = " ", extra = "merge")      
+         
+# Change team abbreviation for LA to LAR
+MergedDataLA <- PlayersDataNames |>
+  mutate(team = gsub("^LA$", "LAR", team))
+
+```
+
+## Normalize Names
+
+This code normalizes names and ensures that only players being used are also in the **StatsData.csv** file.
+
+```{r}
+
+# Define a function to normalize names
+NormalizeNames <- function(name) {
+  name <- str_to_lower(name)  # Makes names lowercase
+  name <- str_replace_all(name, "\\b(jr|sr|iii|ii|iv)\\b", "")  # Remove suffixes
+  name <- str_replace_all(name, "\\.", "")  # Remove periods
+  name <- str_squish(name)  # Trim excess spaces
+  return(name)
+}
+
+# Apply the NormalizeNames function to first and last names
+MergedDataLA$first_name <- NormalizeNames(MergedDataLA$first_name)
+MergedDataLA$last_name <- NormalizeNames(MergedDataLA$last_name)
+
+# Filter players to include only those present in the StatsData data set
+PlayersDataCompared <- MergedDataLA |>
+  semi_join(StatsData, by = c("first_name" = "first_name", "last_name" = "last_name"))
+
+# Order PlayersDataCompared alphabeticaly by first_name then last_name then season
+PlayersDataCompared <- PlayersDataCompared[order(PlayersDataCompared$first_name, 
+                                                 PlayersDataCompared$last_name, 
+                                                 PlayersDataCompared$season),]
+
+```
+
+## Clean birth_date Column
+
+```{r}
+
+# Replace NA values in the birth_date column for players who have a missing birth_date in one row but a valid birth_date in another
+PlayersDataNAReplaced <- PlayersDataCompared |> 
+  group_by(first_name, last_name) |>
+  mutate(birth_date = if_else(is.na(birth_date), 
+                              first(birth_date[!is.na(birth_date)]), 
+                              birth_date)) |> 
+  ungroup()
+
+### NEXT CHUNK OF CODE IS TO VEIW THE DATA ###
+# Check to see if there are any rows with NA values
+PlayersWithNA <- PlayersDataNAReplaced |> 
+  filter(if_any(everything(), is.na))
+
+# Ensuring birth_date is formatted correctly
+PlayersData <- PlayersDataNAReplaced |> 
+  mutate(birth_date = as.Date(birth_date))
+
+```
+
+## Add Players Manually
+
+```{r}
+
+# Define additional players manually
+additionalPlayers <- data.frame(
+  first_name = c( "cedrick", "aj", "kavontae", "jeffery", "gabe", "avery", "robbie", 
+                  "pj", "bam", "deonte", "pj", "robbie", "mike", "mike", 
+                  "cameron", "dee", "dee", "dee", "joseph", "joseph", "joseph", 
+                  "chig", "chig", "jeff", "jeff"
+  ),
+  last_name = c( "wilson", "dillon", "turpin", "wilson", "davis", "williams", "chosen",
+                 "walker", "knight", "harty", "walker", "chosen", "badgley", "badgley",
+                 "dicker", "eskridge", "eskridge", "eskridge", "fortson", "fortson", "fortson",
+                 "okonkwo", "okonkwo", "wilson", "wilson"
+  ),
+  season = c( 2023, 2023, 2023, 2023, 2021, 2021, 2022, 
+              2022, 2022, 2021, 2021, 2021, 2021, 2022, 
+              2022, 2021, 2022, 2023, 2021, 2022, 2023, 
+              2022, 2023, 2021, 2022
+  ),
+  position = c( "WR", "RB", "WR", "RB", "WR", "RB", "WR", 
+                "QB", "RB", "WR", "QB", "WR", "K", "K", 
+                "K", "WR", "WR", "WR", "TE", "TE", "TE", 
+                "TE", "TE", "RB", "RB"
+  ),
+  jersey_number = c( 11, 28, 9, 23, 13, 35, 81, 
+                     11, 27, 11, 11, 11, 6, 17, 
+                     15, 1, 1, 1, 88, 88, 88, 
+                     85, 85, 30, 23
+  ),
+  team = c( "MIA", "GB", "DAL", "MIA", "BUF", "ATL", "ARI", 
+            "CAR", "NYJ", "NO", "CAR", "CAR", "TEN", "DET", 
+            "LAC", "SEA", "SEA", "SEA", "KC", "KC", "KC", 
+            "TEN", "TEN", "SF", "MIA"
+  ),
+  college = c( "Boise State", "Boston College", "Texas Christian", "North Texas", 
+               "Central Florida", "Boise State", "Temple", "Temple", 
+               "North Carolina State", "Assumption", "Temple", "Temple", 
+               "Miami", "Miami", "Texas", "Western Michigan", 
+               "Western Michigan", "Western Michigan", "Valdosta State", "Valdosta State",
+               "Valdosta State", "Maryland", "Maryland", "North Texas", 
+               "North Texas"
+  ),
+  birth_date = c( "1995-11-20", "1998-05-02", "1996-08-02", "1995-11-16", "1999-03-01", 
+                  "1998-07-15", "1993-05-09", "1995-02-26", "2001-04-11", "1997-12-04", 
+                  "1995-02-26", "1993-05-09", "1995-07-28", "1995-07-28", "2000-05-06", 
+                  "1997-03-23", "1997-03-23", "1997-03-23", "1995-12-07", "1995-12-07", 
+                  "1995-12-07", "1999-09-08", "1999-09-08", "1995-11-16", "1995-11-16"
+  ),
+  height = c( 74, 72, 69, 72, 74, 69, 75, 
+              71, 70, 66, 71, 75, 70, 70, 
+              73, 69, 69, 69, 78, 76, 76, 
+              75, 75, 72, 72
+  ),
+  weight = c( 188, 250, 153, 194, 213, 195, 190, 
+              212, 210, 170, 212, 190, 183, 183, 
+              216, 190, 190, 190, 230, 230, 230, 
+              250, 250, 194, 194
+  ),
+  years_exp = c( 5, 3, 4, 5, 4, 0, 6, 
+                 5, 0, 2, 4, 5, 3, 4, 
+                 0, 0, 1, 2, 2, 3, 4, 
+                 0, 1, 3, 4
+  ),
+  headshot_url = c(
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/zvirmx1m9vycmfpfbf1w",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/dydcqdx4leta4rudagkq",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/dl2ngh2glo7gebocl3ah",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/rq7a1zluwjhoxrsuhpgi",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/gybdtwydpj0rggczumgg",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/kutrcxylkhvanrsbwhox",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/ymp4ipmdmmgi4omlw02f",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/cmuf0gtzectijxrktpg2",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/qdfkex1xfpfdyfovabig",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/ouuf2vot58iosguctjiy",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/cmuf0gtzectijxrktpg2",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/zgwiwdaqskofwe9rsvtj",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/vd3bpx6fhrx6thicas7c",
+    "https://static.www.nfl.com/image/upload/f_auto,q_auto/league/ypn2qljwkyly4pdzt7vb",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/zv8qviwznwhdzeuxpni5",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/lwg4cpbjcdcgoru2emht",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/lwg4cpbjcdcgoru2emht",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/lwg4cpbjcdcgoru2emht",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/hmhdj4zf7rv2fiffzpg0",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/q4wdp6zldwvcte3dcbdp",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/gxhstzqswbn4z05r9rqv",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/sxuawjrgawwilhceso3d",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/hkqd6pubp52djhxhtyqi",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/zorqrtlrizlltgd6pnob",
+    "https://static.www.nfl.com/image/private/f_auto,q_auto/league/zorqrtlrizlltgd6pnob"
+  )
+)
+
+# Convert birth_date to Date in additional_players
+additionalPlayers <- additionalPlayers |> 
+  mutate(birth_date = as.Date(birth_date))
+
+# Combine additional players with the main players data frame
+PlayersData <- bind_rows(PlayersData, additionalPlayers)
+
+```
+
+## Export Data
+
+```{r}
+
+# Export the cleaned and filtered player data to a CSV file
+write.csv(PlayersData, "PlayersData.csv", row.names = FALSE, na = "NULL")
+
+```

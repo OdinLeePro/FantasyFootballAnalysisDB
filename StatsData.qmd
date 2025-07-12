@@ -1,0 +1,136 @@
+---
+title: "Fantasy Football: Stats Data"
+author: "Odin Lee"
+date: "Jan 26 2025"
+format: "html"
+---
+
+# Description
+
+Using **nflreadr** R package to create **StatsData.csv** which will be used to import into the **PlayerStatsStagingTable** Table in the Fantasy Football Database
+
+## **Load libraries**
+
+```{r}
+
+# Load the needed libraries
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(nflfastR)
+
+```
+
+## Import Data
+
+```{r}
+
+# Fetch weekly player stats the 2021-2024 seasons
+StatsData <- calculate_stats(2021:2024, "week", "player")
+ 
+# Fetch NFL schedule from 2021 to 2024
+NFLSchedule <- fast_scraper_schedules(2021:2024)
+
+```
+
+## Create Variables
+
+```{r}
+
+# Create/Calculate two new variables fumbleLost and Conversion2Pt
+StatsDataFum2Pt <- StatsData |> 
+  mutate(fumbleLost = (sack_fumbles_lost + rushing_fumbles_lost + receiving_fumbles_lost),
+         conversion2Pt = (passing_2pt_conversions + rushing_2pt_conversions + receiving_2pt_conversions),
+         fg_made_under_40 = (fg_made_0_19 + fg_made_20_29 + fg_made_30_39),
+         fg_made_50_plus = (fg_made_50_59 + fg_made_60_),
+         fg_missedblocked = (fg_missed + fg_blocked),
+         pat_missedbloacked = (pat_missed + pat_blocked))
+
+```
+
+## Modify and Clean Data
+
+```{r}
+
+# Remove non regular season games & Remove non QB, RB, WR, TE, and K
+StatsDataSimplified <- StatsDataFum2Pt |>
+  filter(position %in% c('QB', 'RB', 'WR', 'TE', 'K'),
+         season_type == 'REG')
+ 
+# Join StatsDataSimplified with NFLSchedule data by week, season, and home_team/away_team
+JoinHome <- StatsDataSimplified |>
+  left_join(NFLSchedule, by = c("week", "team" = "home_team", "season"))
+ 
+JoinAway <- StatsDataSimplified |>
+  left_join(NFLSchedule, by = c("week", "team" = "away_team", "season"))
+ 
+# Full Join JoinHome and JoinAway into MergedData
+MergedData <- JoinHome |>
+  full_join(JoinAway, by = names(StatsDataSimplified))
+
+# Create home_team_final/away_team_final by merging team and home_team/away_team then remove home_team and away_team
+MergedDataTeams <- MergedData |> 
+  mutate(home_team_final = coalesce(home_team, team),
+         away_team_final = coalesce(away_team, team)) |>
+  select(-home_team, -away_team)
+
+# Change team abbreviation for LA to LAR
+MergedDataTeamsUpdated <- MergedDataTeams |>
+  mutate(team = gsub("^LA$", "LAR", team),
+         team_home = gsub("^LA$", "LAR", home_team_final),
+         team_away = gsub("^LA$", "LAR", away_team_final))
+
+# Change week from a single number like 10 to "Week 10"
+MergedDataWeeks <- MergedDataTeamsUpdated |>
+  mutate(week = sprintf("Week %d", as.numeric(week)))
+
+# Separate player_display_name into to columns first_name and last_name
+MergedDataNames <- MergedDataWeeks |>
+  separate(player_display_name, into = c("first_name", "last_name"), sep = " ", extra = "merge")
+
+```
+
+## Normalize Names
+
+```{r}
+
+# Define a function to normalize names
+NormalizeNames <- function(name) {
+  name <- str_to_lower(name)  # Makes names lowercase
+  name <- str_replace_all(name, "\\b(jr|sr|iii|ii|iv)\\b", "")  # Remove suffixes
+  name <- str_replace_all(name, "\\.", "")  # Remove periods
+  name <- str_squish(name)  # Trim excess spaces
+  return(name)
+}
+
+# Apply the NormalizeNames function to first and last names
+MergedDataNames$first_name <- NormalizeNames(MergedDataNames$first_name)
+MergedDataNames$last_name <- NormalizeNames(MergedDataNames$last_name)
+
+```
+
+## Select Data
+
+```{r}
+
+# Select relevant columns for the CSV file
+StatsData <- MergedDataNames |>
+  select(first_name, last_name, season, week, team_home, team_away, 
+         completions, attempts, passing_yards, passing_tds, passing_interceptions, carries,
+         rushing_yards, rushing_tds, targets, receptions, receiving_yards, receiving_tds, 
+         fumbleLost, conversion2Pt, special_teams_tds, fg_made_under_40, fg_made_40_49, 
+         fg_made_50_plus, fg_missedblocked, pat_made, pat_missedbloacked)
+
+# Drop players with no stats
+StatsData <- StatsData[!(StatsData$first_name == "josh" & StatsData$last_name == "gable"), ]
+
+```
+
+## Export Data
+
+```{r}
+
+# Export the cleaned stats data to a CSV file
+write.csv(StatsData, "StatsData.csv", row.names = FALSE)
+
+```

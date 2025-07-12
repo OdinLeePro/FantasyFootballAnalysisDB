@@ -66,7 +66,6 @@ This project began as a tool for analyzing fantasy football data with a friend. 
 - Entity-Relationship Modeling
 - SQL Normalization (Primary/Foreign Keys)
 - Triggers for data integrity
-- R-based Data Wrangling
 - Query Design and Optimization
 
 ## License

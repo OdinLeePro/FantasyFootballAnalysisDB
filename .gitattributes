@@ -3,8 +3,6 @@
 *.png linguist-generated
 *.csv linguist-generated
 
-# Ensure qmd files count as R
+# Force detect these as code
 *.qmd linguist-language=R
-
-# Ensure sql files count as SQL
 *.sql linguist-language=SQL

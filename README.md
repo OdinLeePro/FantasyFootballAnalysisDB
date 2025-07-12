@@ -46,6 +46,7 @@ This project began as a tool for analyzing fantasy football data with a friend. 
 │   ├── CreateDB.sql
 │   ├── DataImport.sql
 │   └── ExampleQueries.sql
+├── .gitattributes
 ├── LICENSE
 ├── README.md
 ```

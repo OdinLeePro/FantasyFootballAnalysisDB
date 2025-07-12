@@ -1,0 +1,10 @@
+# Exclude non-code files from language stats
+*.docx linguist-documentation
+*.png linguist-generated
+*.csv linguist-generated
+
+# Ensure qmd files count as R
+*.qmd linguist-language=R
+
+# Ensure SQL files count as SQL
+*.sql linguist-language=SQL

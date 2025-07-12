@@ -6,5 +6,5 @@
 # Ensure qmd files count as R
 *.qmd linguist-language=R
 
-# Ensure SQL files count as SQL
+# Ensure sql files count as SQL
 *.sql linguist-language=SQL

@@ -54,7 +54,7 @@ This project began as a tool for analyzing fantasy football data with a friend. 
 ## Data Sources
 
 - [Kaggle NFL Data](https://www.kaggle.com/)
-- [`nflverse`](https://github.com/nflverse) / `nflfastR` R packages
+- [`nflverse`](https://nflverse.nflverse.com/) / [`nflfastR`](https://mrcaseb.github.io/pages_dummy/) R packages
 
 ## Future Plans
 
